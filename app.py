@@ -62,10 +62,12 @@ try:
 except Exception as e:
     SUPABASE_INIT_ERROR = str(e)
     print(f"❌ Failed to initialize Supabase: {e}")
-    raise RuntimeError(f"Supabase initialization failed: {e}")
+    # Don't raise error - allow app to start but mark as uninitialized
+    # This is important for serverless environments where initialization might fail
+    supabase = None
 
 if not supabase:
-    raise RuntimeError("Supabase client not initialized. Check your SUPABASE_URL and SUPABASE_KEY.")
+    print("⚠️ WARNING: Supabase client not initialized. Some endpoints may not work.")
 
 # ============================================================================
 # SUPABASE FUNCTIONS
