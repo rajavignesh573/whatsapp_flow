@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Wishlist Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 30px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 0.9em;
+        }
+
+        .flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .node {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 12px 20px;
+            min-width: 250px;
+            text-align: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .node:hover {
+            border-color: #4a90e2;
+            box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+        }
+
+        .node.entry {
+            background: #4a90e2;
+            color: white;
+            border-color: #4a90e2;
+            font-weight: 600;
+        }
+
+        .node.webhook {
+            border-color: #2196f3;
+        }
+
+        .node.decision {
+            border-color: #ff9800;
+            background: #fff8e1;
+        }
+
+        .node.menu {
+            border-color: #4caf50;
+            background: #f1f8f4;
+        }
+
+        .node.action {
+            border-color: #9c27b0;
+            background: #faf5ff;
+        }
+
+        .node.end {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .node-title {
+            font-weight: 600;
+            font-size: 0.95em;
+            color: #333;
+        }
+
+        .node.entry .node-title {
+            color: white;
+        }
+
+        .node-details {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .node.entry .node-details {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            background: #333;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .arrow {
+            width: 2px;
+            height: 20px;
+            background: #999;
+            position: relative;
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 8px solid #999;
+        }
+
+        .branch {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .branch-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .branch-label {
+            font-size: 0.8em;
+            color: #666;
+            font-weight: 600;
+            padding: 4px 12px;
+            background: #f0f0f0;
+            border-radius: 12px;
+        }
+
+        .sub-flow {
+            background: #fafafa;
+            border-left: 3px solid #4caf50;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .sub-flow-title {
+            font-size: 0.85em;
+            color: #4caf50;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .compact-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .inline-nodes {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .inline-nodes .node {
+            min-width: 180px;
+            padding: 10px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Wishlist Flow</h1>
+        <p class="subtitle">moombs wishlist flow</p>
+
+        <div class="flow">
+            <!-- Entry -->
+            <div class="node entry">
+                <div class="node-title">Inbound WhatsApp Message</div>
+            </div>
+            <div class="arrow"></div>
+
+            <!-- Step 1 -->
+            <div class="node webhook">
+                <span class="step-number">1</span>
+                <div class="node-title">Webhook: Create/Fetch User</div>
+                <div class="node-details">Retries: 5</div>
+            </div>
+            <div class="arrow"></div>
+
+            <!-- Step 2 -->
+            <div class="node decision">
+                <span class="step-number">2</span>
+                <div class="node-title">Onboarding Completed?</div>
+                <div class="node-details">parent_name AND child_name exist?</div>
+            </div>
+
+            <!-- Branch: Yes/No -->
+            <div class="branch">
+                <div class="branch-item">
+                    <div class="branch-label">YES</div>
+                    <div class="arrow"></div>
+                    <div class="node menu">
+                        <span class="step-number">8</span>
+                        <div class="node-title">Main Menu</div>
+                    </div>
+                </div>
+                <div class="branch-item">
+                    <div class="branch-label">NO</div>
+                    <div class="arrow"></div>
+                    <div class="sub-flow">
+                        <div class="sub-flow-title">Onboarding (Steps 3-7)</div>
+                        <div class="compact-group">
+                            <div class="node action">3. Ask Parent Name</div>
+                            <div class="arrow"></div>
+                            <div class="node action">4. Wait → Save parent_name</div>
+                            <div class="arrow"></div>
+                            <div class="node action">5. Ask Child Name</div>
+                            <div class="arrow"></div>
+                            <div class="node action">6. Wait → Save child_name</div>
+                            <div class="arrow"></div>
+                            <div class="node action">7. Confirm Details</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Menu -->
+            <div class="arrow"></div>
+            <div class="node menu">
+                <span class="step-number">8</span>
+                <div class="node-title">Main Menu</div>
+                <div class="node-details">1. Manage Wishlist | 2. View Wishlist | 3. Settings</div>
+            </div>
+            <div class="arrow"></div>
+
+            <!-- Step 9 -->
+            <div class="node decision">
+                <span class="step-number">9</span>
+                <div class="node-title">Menu Selection</div>
+            </div>
+
+            <!-- Three Branches -->
+            <div class="branch">
+                <!-- Manage Wishlist -->
+                <div class="branch-item">
+                    <div class="branch-label">Manage Wishlist</div>
+                    <div class="arrow"></div>
+                    <div class="sub-flow">
+                        <div class="sub-flow-title">Manage Wishlist (Steps 10-22)</div>
+                        <div class="compact-group">
+                            <div class="node menu">10. Manage Menu</div>
+                            <div class="arrow"></div>
+                            <div class="node decision">11. Action Selection</div>
+                            <div class="arrow"></div>
+                            <div class="inline-nodes">
+                                <div class="node action">12-16: Add Item</div>
+                                <div class="node action">19-22: Update/Delete/Mark</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View Wishlist -->
+                <div class="branch-item">
+                    <div class="branch-label">View Wishlist</div>
+                    <div class="arrow"></div>
+                    <div class="sub-flow">
+                        <div class="sub-flow-title">View Wishlist (Steps 17-18)</div>
+                        <div class="compact-group">
+                            <div class="node webhook">17. Fetch Wishlist</div>
+                            <div class="arrow"></div>
+                            <div class="node menu">18. Display List</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="branch-item">
+                    <div class="branch-label">Settings</div>
+                    <div class="arrow"></div>
+                    <div class="sub-flow">
+                        <div class="sub-flow-title">Settings (Steps 23-26)</div>
+                        <div class="compact-group">
+                            <div class="node menu">23. Edit Options</div>
+                            <div class="arrow"></div>
+                            <div class="node action">24. Wait for Response</div>
+                            <div class="arrow"></div>
+                            <div class="node webhook">25. Update Profile</div>
+                            <div class="arrow"></div>
+                            <div class="node menu">26. Success</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 27 -->
+            <div class="arrow"></div>
+            <div class="node decision">
+                <span class="step-number">27</span>
+                <div class="node-title">Continue?</div>
+            </div>
+
+            <!-- Final Branch -->
+            <div class="branch">
+                <div class="branch-item">
+                    <div class="branch-label">YES</div>
+                    <div class="arrow"></div>
+                    <div class="node menu">→ Main Menu</div>
+                </div>
+                <div class="branch-item">
+                    <div class="branch-label">NO</div>
+                    <div class="arrow"></div>
+                    <div class="node end">End Flow</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

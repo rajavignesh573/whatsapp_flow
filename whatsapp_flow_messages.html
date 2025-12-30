@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Wishlist - Sample Messages & Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #e5ddd5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #075e54;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            color: #075e54;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #075e54;
+        }
+
+        /* WhatsApp Message Styles */
+        .whatsapp-container {
+            max-width: 400px;
+            margin: 0 auto 30px;
+            background: #ece5dd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .whatsapp-header {
+            background: #075e54;
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .whatsapp-header::before {
+            content: '←';
+            font-size: 1.2em;
+        }
+
+        .whatsapp-header::after {
+            content: '⋮';
+            margin-left: auto;
+            font-size: 1.2em;
+        }
+
+        .message {
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.received {
+            align-items: flex-start;
+        }
+
+        .message.sent {
+            align-items: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        .message.received .message-bubble {
+            background: white;
+            border-bottom-left-radius: 2px;
+        }
+
+        .message.sent .message-bubble {
+            background: #dcf8c6;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message-time {
+            font-size: 0.7em;
+            color: #999;
+            margin-top: 4px;
+            padding: 0 8px;
+        }
+
+        .interactive-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .button {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 12px 16px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+
+        .button:hover {
+            background: #f0f0f0;
+            transform: scale(1.02);
+        }
+
+        .button:active {
+            transform: scale(0.98);
+        }
+
+        .flow-step {
+            background: #f5f5f5;
+            border-left: 4px solid #25d366;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .flow-step-title {
+            font-weight: 600;
+            color: #075e54;
+            margin-bottom: 8px;
+        }
+
+        .flow-step-desc {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-bought {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .wishlist-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .wishlist-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .wishlist-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-number {
+            font-weight: 600;
+            color: #075e54;
+            margin-right: 10px;
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .flow-node {
+            background: white;
+            border: 2px solid #25d366;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            position: relative;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            color: #25d366;
+            font-size: 1.5em;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 WhatsApp Wishlist - Sample Messages & Flow</h1>
+
+        <!-- Entry & Onboarding -->
+        <div class="section">
+            <div class="section-title">1. Entry & Onboarding Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 1: User Creation</div>
+                        <div class="flow-step-desc">Webhook creates/fetches user automatically</div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 2: Onboarding Check</div>
+                        <div class="flow-step-desc">System checks if parent_name and child_name exist</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            👋 Welcome! Let's set up your wishlist.
+                        </div>
+                        <div class="message-time">10:30 AM</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Please enter parent name
+                        </div>
+                        <div class="message-time">10:30 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Sarah
+                        </div>
+                        <div class="message-time">10:31 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Please enter child name
+                        </div>
+                        <div class="message-time">10:31 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Emma
+                        </div>
+                        <div class="message-time">10:32 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Parent Name: Sarah<br>
+                            Child Name: Emma
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">✅ Confirm</div>
+                            <div class="button">✏️ Edit later</div>
+                        </div>
+                        <div class="message-time">10:32 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div class="section">
+            <div class="section-title">2. Main Menu</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 8: Main Menu Display</div>
+                        <div class="flow-step-desc">User sees three options</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            What would you like to do?
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">🛍️ Manage Wishlist</div>
+                            <div class="button">👀 View Wishlist</div>
+                            <div class="button">⚙️ Settings / Edit Profile</div>
+                        </div>
+                        <div class="message-time">10:33 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Wishlist -->
+        <div class="section">
+            <div class="section-title">3. Manage Wishlist Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 10: Manage Menu</div>
+                        <div class="flow-step-desc">Four action options</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Manage your wishlist:
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">➕ Add Item</div>
+                            <div class="button">✏️ Update Item</div>
+                            <div class="button">🗑️ Delete Item</div>
+                            <div class="button">✅ Mark Item as Bought</div>
+                        </div>
+                        <div class="message-time">10:34 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Item Flow -->
+        <div class="section">
+            <div class="section-title">4. Add Item Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Steps 12-13: Get Item Name</div>
+                        <div class="flow-step-desc">Ask for item name and wait for response</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 14: Duplicate Check</div>
+                        <div class="flow-step-desc">Verify item doesn't already exist</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Steps 15-16: Save & Confirm</div>
+                        <div class="flow-step-desc">Webhook saves item, user gets confirmation</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Enter item name
+                        </div>
+                        <div class="message-time">10:35 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Toy Car
+                        </div>
+                        <div class="message-time">10:35 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            ✅ Item added successfully
+                        </div>
+                        <div class="message-time">10:35 AM</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Enter item name
+                        </div>
+                        <div class="message-time">10:36 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Toy Car
+                        </div>
+                        <div class="message-time">10:36 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            ⚠️ This item already exists in your wishlist. Please choose a different item.
+                        </div>
+                        <div class="message-time">10:36 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Wishlist -->
+        <div class="section">
+            <div class="section-title">5. View Wishlist Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 17: Fetch Wishlist</div>
+                        <div class="flow-step-desc">Webhook retrieves all items</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 18: Display List</div>
+                        <div class="flow-step-desc">Show numbered list with status</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            <div class="wishlist-display">
+                                <div class="wishlist-item">
+                                    <div>
+                                        <span class="item-number">1.</span>
+                                        Toy Car
+                                    </div>
+                                    <span class="status-badge status-pending">Pending</span>
+                                </div>
+                                <div class="wishlist-item">
+                                    <div>
+                                        <span class="item-number">2.</span>
+                                        Story Book
+                                    </div>
+                                    <span class="status-badge status-pending">Pending</span>
+                                </div>
+                                <div class="wishlist-item">
+                                    <div>
+                                        <span class="item-number">3.</span>
+                                        Puzzle Set
+                                    </div>
+                                    <span class="status-badge status-bought">Bought</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-time">10:37 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update/Delete/Mark Bought -->
+        <div class="section">
+            <div class="section-title">6. Update / Delete / Mark Bought Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Steps 19-20: Get Item Number</div>
+                        <div class="flow-step-desc">Ask for item number to modify</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 21: Perform Action</div>
+                        <div class="flow-step-desc">Webhook updates/deletes/marks item</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 22: Confirm</div>
+                        <div class="flow-step-desc">User receives confirmation</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Select item number to mark as bought
+                        </div>
+                        <div class="message-time">10:38 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            1
+                        </div>
+                        <div class="message-time">10:38 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            ✅ Action completed successfully<br>
+                            Toy Car has been marked as Bought
+                        </div>
+                        <div class="message-time">10:38 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Flow -->
+        <div class="section">
+            <div class="section-title">7. Settings / Edit Profile Flow</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 23: Edit Options</div>
+                        <div class="flow-step-desc">Show edit menu</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Steps 24-25: Update Profile</div>
+                        <div class="flow-step-desc">Capture new value and update via webhook</div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 26: Confirm</div>
+                        <div class="flow-step-desc">Profile updated successfully</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            What would you like to edit?
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">👤 Edit Parent Name</div>
+                            <div class="button">👶 Edit Child Name</div>
+                        </div>
+                        <div class="message-time">10:39 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Edit Parent Name
+                        </div>
+                        <div class="message-time">10:39 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Enter new parent name
+                        </div>
+                        <div class="message-time">10:39 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Sarah Johnson
+                        </div>
+                        <div class="message-time">10:40 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            ✅ Profile updated successfully
+                        </div>
+                        <div class="message-time">10:40 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Continue Loop -->
+        <div class="section">
+            <div class="section-title">8. Continue Loop</div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="flow-step">
+                        <div class="flow-step-title">Step 27: Continue Decision</div>
+                        <div class="flow-step-desc">Ask if user wants to perform another action</div>
+                    </div>
+                </div>
+
+                <div class="whatsapp-container">
+                    <div class="whatsapp-header">Wishlist Bot</div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Would you like to do something else?
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">✅ Yes</div>
+                            <div class="button">❌ No</div>
+                        </div>
+                        <div class="message-time">10:41 AM</div>
+                    </div>
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Yes
+                        </div>
+                        <div class="message-time">10:41 AM ✓</div>
+                    </div>
+                    <div class="message received">
+                        <div class="message-bubble">
+                            What would you like to do?
+                        </div>
+                        <div class="interactive-buttons">
+                            <div class="button">🛍️ Manage Wishlist</div>
+                            <div class="button">👀 View Wishlist</div>
+                            <div class="button">⚙️ Settings / Edit Profile</div>
+                        </div>
+                        <div class="message-time">10:41 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Flow Diagram -->
+        <div class="section">
+            <div class="section-title">Complete Flow Diagram</div>
+            
+            <div class="flow-diagram">
+                <div class="flow-node">📱 Inbound WhatsApp Message</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">🔗 Webhook: Create/Fetch User (Step 1)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">❓ Onboarding Completed? (Step 2)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">📝 Onboarding Flow (Steps 3-7)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">📋 Main Menu (Step 8)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">🎯 Menu Selection (Step 9)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">
+                    <div>🛍️ Manage Wishlist (Steps 10-22)</div>
+                    <div>👀 View Wishlist (Steps 17-18)</div>
+                    <div>⚙️ Settings (Steps 23-26)</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">🔄 Continue? (Step 27)</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node">✅ Yes → Main Menu | ❌ No → End</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

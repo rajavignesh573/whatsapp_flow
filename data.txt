@@ -1,0 +1,122 @@
+async function handler(request, env) {
+  const body = await request.json();
+  const de = body.data_exchange;
+  const action = de.action;
+  const screen = de.screen;
+  const data = de.data || {};
+
+  const flowToken = de.flow_token;
+  let wishlistData = await env.KV.get(`wishlist:${flowToken}`);
+  
+  if (wishlistData) {
+    wishlistData = JSON.parse(wishlistData);
+  } else {
+    wishlistData = {
+      parent_name: "",
+      child_name: "",
+      items: []
+    };
+  }
+
+  if (action === "INIT") {
+    return new Response(JSON.stringify({
+      version: "3.0",
+      screen: "PARENT_INFO",
+      data: {}
+    }), { headers: { "Content-Type": "application/json" } });
+  }
+
+  if (action === "data_exchange") {
+    if (screen === "PARENT_INFO" && data.parent_name && data.child_name) {
+      wishlistData.parent_name = data.parent_name;
+      wishlistData.child_name = data.child_name;
+      await env.KV.put(`wishlist:${flowToken}`, JSON.stringify(wishlistData));
+
+      return new Response(JSON.stringify({
+        version: "3.0",
+        screen: "ADD_ITEM",
+        data: {
+          wishlist_items: wishlistData.items,
+          has_items: wishlistData.items.length > 0
+        }
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    if (screen === "ADD_ITEM") {
+      if (data.done === "true") {
+        let markdownTable = `# Amazing Wishlist!\n\n`;
+        markdownTable += `Your wishlist has been created successfully. We're excited to help make these wishes come true!\n\n`;
+        markdownTable += `**Parent:** ${wishlistData.parent_name}\n\n`;
+        markdownTable += `**Child:** ${wishlistData.child_name}\n\n`;
+        
+        if (wishlistData.items.length > 0) {
+          markdownTable += `| # | Item |\n`;
+          markdownTable += `|---|------|\n`;
+          wishlistData.items.forEach((item, index) => {
+            markdownTable += `| ${index + 1} | ${item.title} |\n`;
+          });
+        } else {
+          markdownTable += `*No items in wishlist*`;
+        }
+
+        const wishlistArray = wishlistData.items.map(item => item.title);
+
+        return new Response(JSON.stringify({
+          version: "3.0",
+          screen: "CHECKOUT",
+          data: {
+            wishlist_table: markdownTable,
+            parent: wishlistData.parent_name,
+            child: wishlistData.child_name,
+            wishlist: wishlistArray
+          }
+        }), { headers: { "Content-Type": "application/json" } });
+      }
+
+      if (data.remove_action === "remove_items" && data.remove_item_ids) {
+        const idsToRemove = Array.isArray(data.remove_item_ids) ? data.remove_item_ids : [data.remove_item_ids];
+        wishlistData.items = wishlistData.items.filter(item => !idsToRemove.includes(item.id));
+        await env.KV.put(`wishlist:${flowToken}`, JSON.stringify(wishlistData));
+      }
+
+      if (data.add_action === "add_item") {
+        if (data.new_item && data.new_item.trim() !== "") {
+          const itemId = `item_${Date.now()}`;
+          wishlistData.items.push({
+            id: itemId,
+            title: data.new_item.trim()
+          });
+          await env.KV.put(`wishlist:${flowToken}`, JSON.stringify(wishlistData));
+        }
+      }
+
+      return new Response(JSON.stringify({
+        version: "3.0",
+        screen: "ADD_ITEM",
+        data: {
+          wishlist_items: wishlistData.items,
+          has_items: wishlistData.items.length > 0
+        }
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+  }
+
+  if (action === "BACK") {
+    if (screen === "ADD_ITEM") {
+      return new Response(JSON.stringify({
+        version: "3.0",
+        screen: "ADD_ITEM",
+        data: {
+          wishlist_items: wishlistData.items,
+          has_items: wishlistData.items.length > 0
+        }
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+  }
+
+  return new Response(JSON.stringify({
+    version: "3.0",
+    screen: "PARENT_INFO",
+    data: {}
+  }), { headers: { "Content-Type": "application/json" } });
+}

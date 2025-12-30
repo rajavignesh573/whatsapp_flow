@@ -1,0 +1,409 @@
+# WhatsApp Wishlist Manager - Product Requirements Document
+
+**Platform:** WhatsApp + Kapso  
+**Version:** 1.0  
+**Status:** Approved for Implementation  
+**Flow Name:** moombs wishlist flow
+
+---
+
+## 1. Objective
+
+This product enables users to manage a **personal wishlist for a parent (mother)** via **WhatsApp**, using a **single Kapso-connected phone number**.  
+The experience is fully **menu-driven**, **stateful**, and supports **multiple independent users**.
+
+---
+
+## 2. Scope
+
+### In Scope
+- WhatsApp conversational interface
+- Automatic user identification via WhatsApp number
+- External API–based user persistence
+- Conversational onboarding
+- Wishlist item CRUD operations
+- Menu-driven navigation
+- Profile management (parent & child name)
+
+### Out of Scope
+- Authentication beyond WhatsApp number
+- Multiple wishlists per user
+- Shared wishlists
+- Payments or analytics
+
+---
+
+## 3. User Persona
+
+**Wishlist Contributor**
+- Uses WhatsApp regularly
+- Non-technical
+- Wants an easy way to track gift ideas
+
+---
+
+## 4. Assumptions & Constraints
+
+- WhatsApp number uniquely identifies a user
+- One user owns exactly one wishlist
+- External API is the system of record
+- Kapso manages conversation state
+
+---
+
+## 5. Data Model
+
+### User
+```json
+{
+  "whatsapp_number": "string",
+  "parent_name": "string",
+  "child_name": "string",
+  "items": []
+}
+```
+
+### Item
+```json
+{
+  "item_id": "string",
+  "item_name": "string",
+  "status": "Pending | Bought"
+}
+```
+
+---
+
+## 6. Functional Requirements
+
+### FR-1: User Identification & Creation
+- Identify users by WhatsApp number
+- Create user on first inbound message
+- Persist user via external API
+- Retry API calls up to 5 times
+- Allow limited functionality if API fails
+
+### FR-2: Onboarding
+- Collect parent name and child name
+- Free-text input
+- Confirm captured data
+- Allow editing later
+- Resume onboarding if interrupted
+
+### FR-3: Wishlist Management
+- Add, view, update, delete items
+- Block duplicate items
+- Default item status = Pending
+- Allow marking item as Bought
+- Bought items remain editable
+
+### FR-4: Settings
+- Edit parent name
+- Edit child name
+
+---
+
+## 7. Non-Functional Requirements
+
+- Menu-driven UX
+- Graceful error handling
+- Near real-time responses
+- Scalable for multiple users
+
+---
+
+## 8. Kapso Workflow Specification
+
+### Entry Trigger
+
+**Inbound WhatsApp Message**  
+This flow starts when any user sends a message to the Kapso-connected WhatsApp number.
+
+---
+
+## 9. User Creation & Sync
+
+### Step 1: Webhook – Create / Fetch User
+
+- **Component:** Webhook
+- **Purpose:** Create or fetch user using WhatsApp number
+- **Retries:** 5
+
+**Payload:**
+```json
+{
+  "phone": "{{whatsapp.number}}",
+  "name": "{{whatsapp.profile_name}}"
+}
+```
+
+If the webhook fails after retries, the user is placed in **limited mode**.
+
+---
+
+## 10. Onboarding Flow
+
+### Step 2: Decision – Onboarding Completed?
+
+**Condition:**
+```
+parent_name exists AND child_name exists
+```
+
+- **Yes** → Main Menu
+- **No** → Start onboarding
+
+---
+
+### Step 3: Send Text – Ask Parent Name
+
+```
+Please enter parent name
+```
+
+### Step 4: Wait for Response
+
+- Save response as `parent_name`
+
+---
+
+### Step 5: Send Text – Ask Child Name
+
+```
+Please enter child name
+```
+
+### Step 6: Wait for Response
+
+- Save response as `child_name`
+
+---
+
+### Step 7: Send Interactive – Confirm Details
+
+**Buttons:**
+- Confirm
+- Edit later
+
+**Message:**
+```
+Parent Name: {{parent_name}}
+Child Name: {{child_name}}
+```
+
+Both actions lead to the Main Menu.
+
+---
+
+## 11. Main Menu
+
+### Step 8: Send Interactive – Main Menu
+
+**Buttons:**
+1. Manage Wishlist
+2. View Wishlist
+3. Settings / Edit Profile
+
+---
+
+### Step 9: Decision – Menu Selection
+
+Routes based on user choice.
+
+---
+
+## 12. Manage Wishlist Sub-Flow
+
+### Step 10: Send Interactive – Manage Wishlist Menu
+
+**Buttons:**
+1. Add Item
+2. Update Item
+3. Delete Item
+4. Mark Item as Bought
+
+---
+
+### Step 11: Decision – Manage Action
+
+Routes to respective item operations.
+
+---
+
+## 13. Add Item Flow
+
+### Step 12: Send Text
+
+```
+Enter item name
+```
+
+### Step 13: Wait for Response
+
+- Save as `item_name`
+
+---
+
+### Step 14: Decision / Custom Function – Duplicate Check
+
+- If duplicate → Notify user and return to Manage Menu
+- If unique → Continue
+
+---
+
+### Step 15: Webhook – Save Item
+
+**Payload:**
+```json
+{
+  "item_name": "{{item_name}}",
+  "status": "Pending"
+}
+```
+
+---
+
+### Step 16: Send Text – Success Message
+
+```
+Item added successfully
+```
+
+---
+
+## 14. View Wishlist Flow
+
+### Step 17: Webhook – Fetch Wishlist
+
+Fetches user's wishlist items from external API.
+
+### Step 18: Send Text – Display Wishlist
+
+**Example:**
+```
+1. Shoes – Pending
+2. Watch – Bought
+```
+
+---
+
+## 15. Update / Delete / Mark Bought Flow
+
+### Step 19: Send Text
+
+```
+Select item number
+```
+
+### Step 20: Wait for Response
+
+- Save as `item_number`
+
+---
+
+### Step 21: Webhook / Custom Function
+
+- Map number to item
+- Perform update / delete / status change
+
+---
+
+### Step 22: Send Text – Confirmation
+
+```
+Action completed successfully
+```
+
+---
+
+## 16. Settings / Edit Profile
+
+### Step 23: Send Interactive
+
+**Buttons:**
+1. Edit Parent Name
+2. Edit Child Name
+
+---
+
+### Step 24: Wait for Response
+
+- Capture updated value
+
+---
+
+### Step 25: Webhook – Update Profile
+
+Updates user profile with new parent_name or child_name.
+
+---
+
+### Step 26: Send Text
+
+```
+Profile updated successfully
+```
+
+---
+
+## 17. Loop or Exit
+
+### Step 27: Decision – Continue?
+
+- **Yes** → Main Menu
+- **No** → End Flow
+
+---
+
+## 18. Visual Flow Summary
+
+```
+Inbound Message
+   ↓
+Webhook (User Create)
+   ↓
+Decision (Onboarding?)
+   ↓
+Onboarding
+   ↓
+Main Menu
+   ↓
+Decision
+   ├─ Manage Wishlist
+   ├─ View Wishlist
+   └─ Settings
+   ↓
+Ask Another Action
+   ├─ Yes → Main Menu
+   └─ No → End
+```
+
+---
+
+## 19. Acceptance Criteria
+
+- Users onboard successfully
+- Wishlist operations work via WhatsApp
+- Users see only their own data
+- Duplicate items are blocked
+- Profile editing works correctly
+- All menu navigation flows properly
+
+---
+
+## 20. Dependencies
+
+- Kapso WhatsApp integration
+- External persistence API
+
+---
+
+## 21. Future Enhancements
+
+- Categories
+- Reminders
+- Sharing
+- Export functionality
+
+---
+
