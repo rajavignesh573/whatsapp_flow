@@ -48,6 +48,11 @@ try:
     import os
     os.environ.setdefault('NO_PROXY', '*')
     os.environ.setdefault('no_proxy', '*')
+    # Also disable proxy for httpx specifically
+    os.environ.setdefault('HTTP_PROXY', '')
+    os.environ.setdefault('HTTPS_PROXY', '')
+    os.environ.setdefault('http_proxy', '')
+    os.environ.setdefault('https_proxy', '')
     
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -57,19 +62,32 @@ try:
         error_msg = str(type_error).lower()
         if 'proxy' in error_msg:
             # The issue is likely that httpx (used by supabase) is trying to pass proxy
-            # but the Client doesn't accept it. Try to initialize with minimal config
+            # but the Client doesn't accept it. Try to patch httpx or use alternative initialization
             try:
-                # Try using the client module directly
-                from supabase.client import Client, ClientOptions
-                options = ClientOptions(
-                    auto_refresh_token=True,
-                    persist_session=False
-                )
-                supabase = Client(SUPABASE_URL, SUPABASE_KEY, options)
-            except Exception as alt_error:
-                # If that fails, try the standard way but catch and log the error
-                print(f"⚠️ Alternative initialization failed: {alt_error}")
-                raise type_error  # Re-raise original error
+                # Try patching httpx to remove proxy from kwargs
+                import httpx
+                original_init = httpx.Client.__init__
+                def patched_init(self, *args, **kwargs):
+                    kwargs.pop('proxy', None)
+                    kwargs.pop('proxies', None)
+                    return original_init(self, *args, **kwargs)
+                httpx.Client.__init__ = patched_init
+                
+                # Now try creating the client again
+                supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+            except Exception as patch_error:
+                # If patching fails, try using the client module directly
+                try:
+                    from supabase.client import Client, ClientOptions
+                    options = ClientOptions(
+                        auto_refresh_token=True,
+                        persist_session=False
+                    )
+                    supabase = Client(SUPABASE_URL, SUPABASE_KEY, options)
+                except Exception as alt_error:
+                    # If that fails, log the error
+                    print(f"⚠️ Alternative initialization failed: {alt_error}")
+                    raise type_error  # Re-raise original error
         else:
             raise
     
