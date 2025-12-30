@@ -12,20 +12,27 @@ load_dotenv()
 app = Flask(__name__)
 
 # Supabase configuration
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_URL = os.getenv('SUPABASE_URL') or os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.environ.get('SUPABASE_KEY')
 
 # Initialize Supabase client
 supabase: Optional[Client] = None
+USE_SUPABASE = False
+
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        USE_SUPABASE = True
+        print(f"✅ Supabase initialized successfully")
     except Exception as e:
-        print(f"Warning: Could not initialize Supabase: {e}")
+        print(f"❌ Warning: Could not initialize Supabase: {e}")
         print("Falling back to JSON file storage")
-
-# Fallback to JSON if Supabase is not configured
-USE_SUPABASE = supabase is not None
+        USE_SUPABASE = False
+else:
+    print(f"⚠️ Supabase not configured:")
+    print(f"   SUPABASE_URL: {'Set' if SUPABASE_URL else 'NOT SET'}")
+    print(f"   SUPABASE_KEY: {'Set' if SUPABASE_KEY else 'NOT SET'}")
+    print("Falling back to JSON file storage")
 DB_FILE = 'whatsapp_messages.json'
 USERS_DB_FILE = 'users.json'
 
@@ -369,15 +376,30 @@ def save_user():
         }
         
         if USE_SUPABASE:
-            saved_user = save_user_to_supabase(user_data)
+            try:
+                saved_user = save_user_to_supabase(user_data)
+            except Exception as e:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Supabase error: {str(e)}',
+                    'fallback_used': False
+                }), 500
         else:
-            users = load_users()
-            existing = users.get(phone, {})
-            user_data['created_at'] = existing.get('created_at', datetime.now().isoformat())
-            user_data['updated_at'] = datetime.now().isoformat()
-            users[phone] = user_data
-            save_users(users)
-            saved_user = user_data
+            # Fallback to JSON (will fail on Vercel)
+            try:
+                users = load_users()
+                existing = users.get(phone, {})
+                user_data['created_at'] = existing.get('created_at', datetime.now().isoformat())
+                user_data['updated_at'] = datetime.now().isoformat()
+                users[phone] = user_data
+                save_users(users)
+                saved_user = user_data
+            except Exception as e:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'JSON storage failed (read-only filesystem): {str(e)}. Please configure Supabase environment variables in Vercel.',
+                    'hint': 'Add SUPABASE_URL and SUPABASE_KEY to Vercel environment variables and redeploy'
+                }), 500
         
         return jsonify({
             'status': 'success',
@@ -443,7 +465,23 @@ def health_check():
         'status': 'healthy',
         'service': 'WhatsApp Webhook API',
         'database': 'Supabase' if USE_SUPABASE else 'JSON Files',
-        'supabase_configured': USE_SUPABASE
+        'supabase_configured': USE_SUPABASE,
+        'supabase_url_set': bool(SUPABASE_URL),
+        'supabase_key_set': bool(SUPABASE_KEY)
+    }), 200
+
+@app.route('/debug', methods=['GET'])
+def debug_info():
+    """Debug endpoint to check configuration"""
+    return jsonify({
+        'supabase_url': SUPABASE_URL[:20] + '...' if SUPABASE_URL and len(SUPABASE_URL) > 20 else SUPABASE_URL,
+        'supabase_key': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY and len(SUPABASE_KEY) > 20 else SUPABASE_KEY,
+        'supabase_configured': USE_SUPABASE,
+        'supabase_client': 'initialized' if supabase else 'not initialized',
+        'environment_vars': {
+            'SUPABASE_URL': 'SET' if SUPABASE_URL else 'NOT SET',
+            'SUPABASE_KEY': 'SET' if SUPABASE_KEY else 'NOT SET'
+        }
     }), 200
 
 if __name__ == '__main__':
