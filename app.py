@@ -26,58 +26,52 @@ SUPABASE_URL = os.getenv('SUPABASE_URL') or os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.environ.get('SUPABASE_KEY')
 
 # HARDCODED FALLBACK (ONLY FOR TESTING - NOT RECOMMENDED FOR PRODUCTION)
-# Remove these after confirming environment variables work!
 if not SUPABASE_URL:
     SUPABASE_URL = 'https://huyzlryubollexkuykgd.supabase.co'
 if not SUPABASE_KEY:
     SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1eXpscnl1Ym9sbGV4a3V5a2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwOTE2NTUsImV4cCI6MjA4MjY2NzY1NX0.709TKB1MZbLXLb210KSe4nj4cHhgwK9jDZWhdFOL6fY'
 
-# Initialize Supabase client
+# Initialize Supabase client - REQUIRED
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set. Add them to environment variables.")
+
+if not create_client:
+    raise RuntimeError("Supabase library not installed. Run: pip install supabase")
+
 supabase: Optional[Client] = None
-USE_SUPABASE = False
 SUPABASE_INIT_ERROR = None
 
-if SUPABASE_URL and SUPABASE_KEY:
+try:
+    # Create Supabase client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Test connection by trying to query (this will fail if tables don't exist)
     try:
-        # Create Supabase client - use the already imported create_client
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        
-        # Test connection by trying to query (this will fail if tables don't exist)
-        try:
-            result = supabase.table('users').select('id').limit(1).execute()
-            USE_SUPABASE = True
-            print(f"✅ Supabase initialized successfully")
-        except Exception as table_error:
-            # If it's a table not found error, that's okay - we'll create it
-            error_str = str(table_error).lower()
-            if 'relation' in error_str and 'does not exist' in error_str:
-                USE_SUPABASE = False
-                SUPABASE_INIT_ERROR = f"Tables don't exist. Run SQL setup script: {str(table_error)}"
-                print(f"⚠️ Supabase connected but tables don't exist: {table_error}")
-                print("Make sure you've run the SQL setup script in Supabase!")
-            else:
-                # Other error - might be permissions or connection
-                USE_SUPABASE = False
-                SUPABASE_INIT_ERROR = str(table_error)
-                print(f"⚠️ Supabase connection issue: {table_error}")
-    except Exception as e:
-        USE_SUPABASE = False
-        SUPABASE_INIT_ERROR = str(e)
-        print(f"❌ Warning: Could not initialize Supabase: {e}")
-        print("Falling back to JSON file storage")
-else:
-    print(f"⚠️ Supabase not configured:")
-    print(f"   SUPABASE_URL: {'Set' if SUPABASE_URL else 'NOT SET'}")
-    print(f"   SUPABASE_KEY: {'Set' if SUPABASE_KEY else 'NOT SET'}")
-    print("Falling back to JSON file storage")
-DB_FILE = 'whatsapp_messages.json'
-USERS_DB_FILE = 'users.json'
+        result = supabase.table('users').select('id').limit(1).execute()
+        print(f"✅ Supabase initialized successfully")
+    except Exception as table_error:
+        # If it's a table not found error, warn but allow app to start
+        error_str = str(table_error).lower()
+        if 'relation' in error_str and 'does not exist' in error_str:
+            SUPABASE_INIT_ERROR = f"Tables don't exist. Run SQL setup script: {str(table_error)}"
+            print(f"⚠️ Supabase connected but tables don't exist: {table_error}")
+            print("Make sure you've run the SQL setup script in Supabase!")
+        else:
+            SUPABASE_INIT_ERROR = str(table_error)
+            print(f"⚠️ Supabase connection issue: {table_error}")
+except Exception as e:
+    SUPABASE_INIT_ERROR = str(e)
+    print(f"❌ Failed to initialize Supabase: {e}")
+    raise RuntimeError(f"Supabase initialization failed: {e}")
+
+if not supabase:
+    raise RuntimeError("Supabase client not initialized. Check your SUPABASE_URL and SUPABASE_KEY.")
 
 # ============================================================================
 # SUPABASE FUNCTIONS
 # ============================================================================
 
-def save_message_to_supabase(data: Dict[Any, Any]) -> None:
+def save_message(data: Dict[Any, Any]) -> None:
     """Save message to Supabase messages table"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -92,7 +86,7 @@ def save_message_to_supabase(data: Dict[Any, Any]) -> None:
         'timestamp': data['timestamp']
     }).execute()
 
-def get_messages_from_supabase() -> list:
+def get_messages() -> list:
     """Get all messages from Supabase"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -108,7 +102,7 @@ def get_messages_from_supabase() -> list:
             messages.append(row)
     return messages
 
-def get_message_by_id_from_supabase(message_id: int) -> Optional[dict]:
+def get_message_by_id(message_id: int) -> Optional[dict]:
     """Get message by ID from Supabase"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -124,7 +118,7 @@ def get_message_by_id_from_supabase(message_id: int) -> Optional[dict]:
             return row
     return None
 
-def get_user_from_supabase(phone: str) -> Optional[dict]:
+def get_user(phone: str) -> Optional[dict]:
     """Get user by phone from Supabase"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -141,7 +135,7 @@ def get_user_from_supabase(phone: str) -> Optional[dict]:
         return user
     return None
 
-def save_user_to_supabase(user_data: Dict[Any, Any]) -> dict:
+def save_user(user_data: Dict[Any, Any]) -> dict:
     """Save or update user in Supabase"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -149,7 +143,7 @@ def save_user_to_supabase(user_data: Dict[Any, Any]) -> dict:
     phone = user_data['phone']
     
     # Check if user exists
-    existing = get_user_from_supabase(phone)
+    existing = get_user(phone)
     
     # Prepare data for Supabase
     db_data = {
@@ -179,7 +173,7 @@ def save_user_to_supabase(user_data: Dict[Any, Any]) -> dict:
     
     return saved_user
 
-def get_all_users_from_supabase() -> dict:
+def get_all_users() -> dict:
     """Get all users from Supabase"""
     if not supabase:
         raise Exception("Supabase not configured")
@@ -198,55 +192,6 @@ def get_all_users_from_supabase() -> dict:
     return users
 
 # ============================================================================
-# JSON FALLBACK FUNCTIONS (for local development without Supabase)
-# ============================================================================
-
-def load_database() -> list:
-    """Load messages from JSON database (fallback)"""
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return []
-    return []
-
-def save_to_database(data: Dict[Any, Any]) -> None:
-    """Save message to JSON database (fallback)"""
-    messages = load_database()
-    
-    if 'timestamp' not in data:
-        data['timestamp'] = datetime.now().isoformat()
-    
-    if 'id' not in data:
-        data['id'] = len(messages) + 1
-    
-    messages.append(data)
-    
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(messages, f, indent=2, ensure_ascii=False)
-
-def load_users() -> dict:
-    """Load users from JSON database (fallback)"""
-    if os.path.exists(USERS_DB_FILE):
-        try:
-            with open(USERS_DB_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return {}
-    return {}
-
-def save_users(users: dict) -> None:
-    """Save users to JSON database (fallback)"""
-    with open(USERS_DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(users, f, indent=2, ensure_ascii=False)
-
-def get_user_by_phone(phone: str) -> dict:
-    """Get user by phone number (fallback)"""
-    users = load_users()
-    return users.get(phone, None)
-
-# ============================================================================
 # API ROUTES
 # ============================================================================
 
@@ -262,11 +207,8 @@ def whatsapp_webhook():
                 'message': 'No data received'
             }), 400
         
-        # Store the data
-        if USE_SUPABASE:
-            save_message_to_supabase(data)
-        else:
-            save_to_database(data)
+        # Store the data in Supabase
+        save_message(data)
         
         return jsonify({
             'status': 'success',
@@ -298,13 +240,10 @@ def verify_webhook():
         }), 403
 
 @app.route('/messages', methods=['GET'])
-def get_messages():
+def get_messages_endpoint():
     """Retrieve all stored messages"""
     try:
-        if USE_SUPABASE:
-            messages = get_messages_from_supabase()
-        else:
-            messages = load_database()
+        messages = get_messages()
         
         return jsonify({
             'status': 'success',
@@ -318,14 +257,10 @@ def get_messages():
         }), 500
 
 @app.route('/messages/<int:message_id>', methods=['GET'])
-def get_message(message_id: int):
+def get_message_endpoint(message_id: int):
     """Retrieve a specific message by ID"""
     try:
-        if USE_SUPABASE:
-            message = get_message_by_id_from_supabase(message_id)
-        else:
-            messages = load_database()
-            message = next((m for m in messages if m.get('id') == message_id), None)
+        message = get_message_by_id(message_id)
         
         if message:
             return jsonify({
@@ -356,12 +291,7 @@ def check_or_create_user():
             }), 400
         
         phone = data['phone']
-        
-        if USE_SUPABASE:
-            user = get_user_from_supabase(phone)
-        else:
-            users = load_users()
-            user = users.get(phone)
+        user = get_user(phone)
         
         if user:
             return jsonify({
@@ -382,7 +312,7 @@ def check_or_create_user():
         }), 500
 
 @app.route('/save-user', methods=['POST'])
-def save_user():
+def save_user_endpoint():
     """Save or update user information"""
     try:
         data = request.get_json()
@@ -412,31 +342,8 @@ def save_user():
             'wishlist': data.get('wishlist', [])
         }
         
-        if USE_SUPABASE:
-            try:
-                saved_user = save_user_to_supabase(user_data)
-            except Exception as e:
-                return jsonify({
-                    'status': 'error',
-                    'message': f'Supabase error: {str(e)}',
-                    'fallback_used': False
-                }), 500
-        else:
-            # Fallback to JSON (will fail on Vercel)
-            try:
-                users = load_users()
-                existing = users.get(phone, {})
-                user_data['created_at'] = existing.get('created_at', datetime.now().isoformat())
-                user_data['updated_at'] = datetime.now().isoformat()
-                users[phone] = user_data
-                save_users(users)
-                saved_user = user_data
-            except Exception as e:
-                return jsonify({
-                    'status': 'error',
-                    'message': f'JSON storage failed (read-only filesystem): {str(e)}. Please configure Supabase environment variables in Vercel.',
-                    'hint': 'Add SUPABASE_URL and SUPABASE_KEY to Vercel environment variables and redeploy'
-                }), 500
+        # Save to Supabase
+        saved_user = save_user(user_data)
         
         return jsonify({
             'status': 'success',
@@ -451,13 +358,10 @@ def save_user():
         }), 500
 
 @app.route('/users', methods=['GET'])
-def get_all_users():
+def get_all_users_endpoint():
     """Retrieve all users from database"""
     try:
-        if USE_SUPABASE:
-            users = get_all_users_from_supabase()
-        else:
-            users = load_users()
+        users = get_all_users()
         
         return jsonify({
             'status': 'success',
@@ -471,13 +375,10 @@ def get_all_users():
         }), 500
 
 @app.route('/users/<phone>', methods=['GET'])
-def get_user(phone: str):
+def get_user_endpoint(phone: str):
     """Retrieve a specific user by phone number"""
     try:
-        if USE_SUPABASE:
-            user = get_user_from_supabase(phone)
-        else:
-            user = get_user_by_phone(phone)
+        user = get_user(phone)
         
         if user:
             return jsonify({
@@ -501,10 +402,11 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'WhatsApp Webhook API',
-        'database': 'Supabase' if USE_SUPABASE else 'JSON Files',
-        'supabase_configured': USE_SUPABASE,
+        'database': 'Supabase',
+        'supabase_configured': supabase is not None,
         'supabase_url_set': bool(SUPABASE_URL),
-        'supabase_key_set': bool(SUPABASE_KEY)
+        'supabase_key_set': bool(SUPABASE_KEY),
+        'init_error': SUPABASE_INIT_ERROR
     }), 200
 
 @app.route('/debug', methods=['GET'])
@@ -513,7 +415,7 @@ def debug_info():
     return jsonify({
         'supabase_url': SUPABASE_URL[:30] + '...' if SUPABASE_URL and len(SUPABASE_URL) > 30 else SUPABASE_URL,
         'supabase_key': SUPABASE_KEY[:30] + '...' if SUPABASE_KEY and len(SUPABASE_KEY) > 30 else SUPABASE_KEY,
-        'supabase_configured': USE_SUPABASE,
+        'supabase_configured': supabase is not None,
         'supabase_client': 'initialized' if supabase else 'not initialized',
         'init_error': SUPABASE_INIT_ERROR,
         'environment_vars': {
@@ -524,16 +426,5 @@ def debug_info():
     }), 200
 
 if __name__ == '__main__':
-    # Initialize JSON databases if not using Supabase
-    if not USE_SUPABASE:
-        if not os.path.exists(DB_FILE):
-            with open(DB_FILE, 'w', encoding='utf-8') as f:
-                json.dump([], f)
-        
-        if not os.path.exists(USERS_DB_FILE):
-            with open(USERS_DB_FILE, 'w', encoding='utf-8') as f:
-                json.dump({}, f)
-    
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-

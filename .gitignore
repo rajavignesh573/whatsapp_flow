@@ -11,9 +11,9 @@ ENV/
 dist/
 build/
 
-# JSON databases (optional - remove if you want to track them)
-# whatsapp_messages.json
-# users.json
+# JSON database files (not used - Supabase only)
+whatsapp_messages.json
+users.json
 
 # IDE
 .vscode/
