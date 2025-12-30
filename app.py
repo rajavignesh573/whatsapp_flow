@@ -12,22 +12,40 @@ load_dotenv()
 app = Flask(__name__)
 
 # Supabase configuration
+# Try environment variables first, then fallback to hardcoded (for testing only)
 SUPABASE_URL = os.getenv('SUPABASE_URL') or os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.environ.get('SUPABASE_KEY')
+
+# HARDCODED FALLBACK (ONLY FOR TESTING - NOT RECOMMENDED FOR PRODUCTION)
+# Remove these after confirming environment variables work!
+if not SUPABASE_URL:
+    SUPABASE_URL = 'https://huyzlryubollexkuykgd.supabase.co'
+if not SUPABASE_KEY:
+    SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1eXpscnl1Ym9sbGV4a3V5a2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwOTE2NTUsImV4cCI6MjA4MjY2NzY1NX0.709TKB1MZbLXLb210KSe4nj4cHhgwK9jDZWhdFOL6fY'
 
 # Initialize Supabase client
 supabase: Optional[Client] = None
 USE_SUPABASE = False
+SUPABASE_INIT_ERROR = None
 
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        USE_SUPABASE = True
-        print(f"✅ Supabase initialized successfully")
+        # Test connection by trying to query (this will fail if tables don't exist)
+        try:
+            supabase.table('users').select('id').limit(1).execute()
+            USE_SUPABASE = True
+            print(f"✅ Supabase initialized successfully")
+        except Exception as table_error:
+            USE_SUPABASE = False
+            SUPABASE_INIT_ERROR = f"Tables may not exist: {str(table_error)}"
+            print(f"⚠️ Supabase client created but tables may not exist: {table_error}")
+            print("Make sure you've run the SQL setup script in Supabase!")
     except Exception as e:
+        USE_SUPABASE = False
+        SUPABASE_INIT_ERROR = str(e)
         print(f"❌ Warning: Could not initialize Supabase: {e}")
         print("Falling back to JSON file storage")
-        USE_SUPABASE = False
 else:
     print(f"⚠️ Supabase not configured:")
     print(f"   SUPABASE_URL: {'Set' if SUPABASE_URL else 'NOT SET'}")
@@ -474,14 +492,16 @@ def health_check():
 def debug_info():
     """Debug endpoint to check configuration"""
     return jsonify({
-        'supabase_url': SUPABASE_URL[:20] + '...' if SUPABASE_URL and len(SUPABASE_URL) > 20 else SUPABASE_URL,
-        'supabase_key': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY and len(SUPABASE_KEY) > 20 else SUPABASE_KEY,
+        'supabase_url': SUPABASE_URL[:30] + '...' if SUPABASE_URL and len(SUPABASE_URL) > 30 else SUPABASE_URL,
+        'supabase_key': SUPABASE_KEY[:30] + '...' if SUPABASE_KEY and len(SUPABASE_KEY) > 30 else SUPABASE_KEY,
         'supabase_configured': USE_SUPABASE,
         'supabase_client': 'initialized' if supabase else 'not initialized',
+        'init_error': SUPABASE_INIT_ERROR,
         'environment_vars': {
-            'SUPABASE_URL': 'SET' if SUPABASE_URL else 'NOT SET',
-            'SUPABASE_KEY': 'SET' if SUPABASE_KEY else 'NOT SET'
-        }
+            'SUPABASE_URL': 'SET' if os.getenv('SUPABASE_URL') or os.environ.get('SUPABASE_URL') else 'NOT SET (using hardcoded)',
+            'SUPABASE_KEY': 'SET' if os.getenv('SUPABASE_KEY') or os.environ.get('SUPABASE_KEY') else 'NOT SET (using hardcoded)'
+        },
+        'hint': 'If init_error shows table error, run SQL setup script in Supabase'
     }), 200
 
 if __name__ == '__main__':
