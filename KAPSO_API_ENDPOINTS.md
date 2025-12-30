@@ -47,11 +47,13 @@ This document describes the API endpoints required for the Kapso WhatsApp onboar
 
 ---
 
-### 2. Save User
+### 2. Save User ⚠️ MANDATORY
 
 **Endpoint:** `POST /save-user`
 
 **Purpose:** Save or update user information after onboarding.
+
+**⚠️ IMPORTANT:** This step MUST happen before any wishlist actions!
 
 **Request Body:**
 ```json
@@ -82,7 +84,7 @@ This document describes the API endpoints required for the Kapso WhatsApp onboar
 **Usage in Kapso:**
 - Add Step → Webhook
 - Method: POST
-- URL: `YOUR_API_URL/save-user`
+- URL: `https://whatsapp-flow-pi.vercel.app/save-user`
 - Body:
 ```json
 {
@@ -92,6 +94,8 @@ This document describes the API endpoints required for the Kapso WhatsApp onboar
   "wishlist": []
 }
 ```
+
+**➡️ This step MUST happen before wishlist actions**
 
 ---
 
@@ -161,8 +165,10 @@ Decision → {{steps.webhook.response.exists}} == false
 
 ### Step 3: New User Flow
 After collecting parent_name and child_name:
+
+**⚠️ MANDATORY: Save User (MUST happen before wishlist actions)**
 ```
-Webhook → POST /save-user
+Webhook → POST https://whatsapp-flow-pi.vercel.app/save-user
 Body: {
   "user": "{{context.phone_number}}",
   "parent_name": "{{parent_name}}",
@@ -170,6 +176,8 @@ Body: {
   "wishlist": []
 }
 ```
+
+➡️ This step MUST happen before wishlist actions
 
 ---
 
