@@ -32,12 +32,15 @@ supabase: Optional[Client] = None
 SUPABASE_INIT_ERROR = None
 
 if not SUPABASE_URL or not SUPABASE_KEY:
+    print("❌ ERROR: SUPABASE_URL and SUPABASE_KEY must be set. Add them to environment variables.")
     raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set. Add them to environment variables.")
 
 if not create_client:
+    print("❌ ERROR: Supabase library not installed. Run: pip install supabase")
     raise RuntimeError("Supabase library not installed. Run: pip install supabase")
 
 try:
+    # Create Supabase client - simple initialization
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     # Test connection
     try:
@@ -48,9 +51,22 @@ try:
         if 'relation' in error_str and 'does not exist' in error_str:
             SUPABASE_INIT_ERROR = f"Tables don't exist. Run SQL setup script in Supabase: {str(table_error)}"
             print(f"⚠️ Supabase connected but tables don't exist. Run supabase_setup.sql in Supabase SQL Editor!")
+            # Don't raise error - allow app to start but warn about tables
         else:
             SUPABASE_INIT_ERROR = str(table_error)
             print(f"⚠️ Supabase connection issue: {table_error}")
+except TypeError as e:
+    # Handle version compatibility issues
+    if 'proxy' in str(e) or 'unexpected keyword' in str(e):
+        SUPABASE_INIT_ERROR = f"Version compatibility issue: {str(e)}"
+        print(f"❌ Supabase version compatibility error: {e}")
+        print("🔧 Fix: pip uninstall supabase gotrue httpx && pip install supabase==2.3.4")
+        print("   Or try: pip install 'gotrue<2.5'")
+        raise RuntimeError(f"Supabase version compatibility issue. Fix: pip uninstall supabase gotrue httpx && pip install supabase==2.3.4")
+    else:
+        SUPABASE_INIT_ERROR = str(e)
+        print(f"❌ Failed to initialize Supabase: {e}")
+        raise RuntimeError(f"Supabase initialization failed: {e}")
 except Exception as e:
     SUPABASE_INIT_ERROR = str(e)
     print(f"❌ Failed to initialize Supabase: {e}")
