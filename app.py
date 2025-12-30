@@ -43,7 +43,35 @@ SUPABASE_INIT_ERROR = None
 
 try:
     # Create Supabase client
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    # Handle potential proxy argument issues in serverless environments
+    # Set NO_PROXY to prevent httpx from trying to use proxy settings
+    import os
+    os.environ.setdefault('NO_PROXY', '*')
+    os.environ.setdefault('no_proxy', '*')
+    
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except TypeError as type_error:
+        # If there's a type error with proxy argument, it's likely a version compatibility issue
+        # Try to work around it by using the client with explicit options
+        error_msg = str(type_error).lower()
+        if 'proxy' in error_msg:
+            # The issue is likely that httpx (used by supabase) is trying to pass proxy
+            # but the Client doesn't accept it. Try to initialize with minimal config
+            try:
+                # Try using the client module directly
+                from supabase.client import Client, ClientOptions
+                options = ClientOptions(
+                    auto_refresh_token=True,
+                    persist_session=False
+                )
+                supabase = Client(SUPABASE_URL, SUPABASE_KEY, options)
+            except Exception as alt_error:
+                # If that fails, try the standard way but catch and log the error
+                print(f"⚠️ Alternative initialization failed: {alt_error}")
+                raise type_error  # Re-raise original error
+        else:
+            raise
     
     # Test connection by trying to query (this will fail if tables don't exist)
     try:
