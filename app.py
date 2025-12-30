@@ -3,8 +3,17 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional
-from supabase import create_client, Client
 from dotenv import load_dotenv
+
+# Import Supabase - handle version compatibility
+try:
+    from supabase import create_client, Client
+except ImportError:
+    try:
+        from supabase.client import create_client, Client
+    except ImportError:
+        create_client = None
+        Client = None
 
 # Load environment variables
 load_dotenv()
@@ -30,17 +39,27 @@ SUPABASE_INIT_ERROR = None
 
 if SUPABASE_URL and SUPABASE_KEY:
     try:
+        # Create Supabase client - use the already imported create_client
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
         # Test connection by trying to query (this will fail if tables don't exist)
         try:
-            supabase.table('users').select('id').limit(1).execute()
+            result = supabase.table('users').select('id').limit(1).execute()
             USE_SUPABASE = True
             print(f"✅ Supabase initialized successfully")
         except Exception as table_error:
-            USE_SUPABASE = False
-            SUPABASE_INIT_ERROR = f"Tables may not exist: {str(table_error)}"
-            print(f"⚠️ Supabase client created but tables may not exist: {table_error}")
-            print("Make sure you've run the SQL setup script in Supabase!")
+            # If it's a table not found error, that's okay - we'll create it
+            error_str = str(table_error).lower()
+            if 'relation' in error_str and 'does not exist' in error_str:
+                USE_SUPABASE = False
+                SUPABASE_INIT_ERROR = f"Tables don't exist. Run SQL setup script: {str(table_error)}"
+                print(f"⚠️ Supabase connected but tables don't exist: {table_error}")
+                print("Make sure you've run the SQL setup script in Supabase!")
+            else:
+                # Other error - might be permissions or connection
+                USE_SUPABASE = False
+                SUPABASE_INIT_ERROR = str(table_error)
+                print(f"⚠️ Supabase connection issue: {table_error}")
     except Exception as e:
         USE_SUPABASE = False
         SUPABASE_INIT_ERROR = str(e)
