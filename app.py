@@ -239,6 +239,20 @@ def get_all_users() -> dict:
         users[phone] = row
     return users
 
+def get_menu_items() -> list:
+    """Get all menu items from Supabase"""
+    if not supabase:
+        raise Exception("Supabase not configured")
+    
+    response = supabase.table('menu_items').select('*').order('display_order', desc=False).execute()
+    menu_items = []
+    for row in response.data:
+        menu_items.append({
+            'id': row['id'],
+            'title': row['title']
+        })
+    return menu_items
+
 # ============================================================================
 # API ROUTES
 # ============================================================================
@@ -472,6 +486,23 @@ def debug_info():
         },
         'hint': 'If init_error shows table error, run SQL setup script in Supabase'
     }), 200
+
+@app.route('/menu', methods=['GET'])
+def get_menu_endpoint():
+    """Retrieve all menu items"""
+    try:
+        menu_items = get_menu_items()
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(menu_items),
+            'menu': menu_items
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

@@ -26,12 +26,33 @@ CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 -- Create index on timestamp for messages
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 
+-- Create menu_items table
+CREATE TABLE IF NOT EXISTS menu_items (
+    id VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index on display_order for sorting
+CREATE INDEX IF NOT EXISTS idx_menu_items_display_order ON menu_items(display_order);
+
+-- Insert default menu items
+INSERT INTO menu_items (id, title, display_order) VALUES
+    ('ADD', '➕ Add to Wishlist', 1),
+    ('VIEW', '📄 View Wishlist', 2),
+    ('REMOVE', '❌ Remove from Wishlist', 3)
+ON CONFLICT (id) DO NOTHING;
+
 -- Enable Row Level Security (RLS) - Optional
 -- ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
 
 -- Create policies if using RLS (adjust as needed)
 -- Policy to allow all operations (for API key access)
 -- CREATE POLICY "Allow all operations" ON messages FOR ALL USING (true);
 -- CREATE POLICY "Allow all operations" ON users FOR ALL USING (true);
+-- CREATE POLICY "Allow all operations" ON menu_items FOR ALL USING (true);
 
