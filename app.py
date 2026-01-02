@@ -253,6 +253,14 @@ def get_menu_items() -> list:
         })
     return menu_items
 
+def get_primary_input_fields() -> list:
+    """Get all primary input fields from Supabase"""
+    if not supabase:
+        raise Exception("Supabase not configured")
+    
+    response = supabase.table('primary_input_field').select('no, field_name, created_at').order('no', desc=False).execute()
+    return response.data
+
 # ============================================================================
 # API ROUTES
 # ============================================================================
@@ -497,6 +505,23 @@ def get_menu_endpoint():
             'status': 'success',
             'count': len(menu_items),
             'menu': menu_items
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/primary-input-fields', methods=['GET'])
+def get_primary_input_fields_endpoint():
+    """Retrieve all primary input fields"""
+    try:
+        fields = get_primary_input_fields()
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(fields),
+            'data': fields
         }), 200
     except Exception as e:
         return jsonify({

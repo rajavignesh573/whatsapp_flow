@@ -45,6 +45,20 @@ INSERT INTO menu_items (id, title, display_order) VALUES
     ('REMOVE', '❌ Remove from Wishlist', 3)
 ON CONFLICT (id) DO NOTHING;
 
+-- Create primary_input_field table
+CREATE TABLE IF NOT EXISTS primary_input_field (
+    no INTEGER PRIMARY KEY,
+    field_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert sample data
+INSERT INTO primary_input_field (no, field_name, created_at) VALUES
+    (1, 'parent_01', NOW()),
+    (2, 'child_01', NOW()),
+    (3, 'child_02', NOW())
+ON CONFLICT (no) DO NOTHING;
+
 -- Enable Row Level Security (RLS) - Optional
 -- ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
